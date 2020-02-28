@@ -53,6 +53,7 @@ use im_online::sr25519::AuthorityId as ImOnlineId;
 use authority_discovery_primitives::AuthorityId as AuthorityDiscoveryId;
 use system::offchain::TransactionSubmitter;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
+use staking::sr25519::AuthorityId as StakingId;
 
 #[cfg(feature = "std")]
 pub use staking::StakerStatus;
@@ -275,6 +276,8 @@ parameter_types! {
 	// 28 eras in which slashes can be cancelled (7 days).
 	pub const SlashDeferDuration: staking::EraIndex = 28;
 	pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
+	/// This means that the offchain election is disabled for now.
+	pub const ElectionLookahead: BlockNumber = 0;
 }
 
 impl staking::Trait for Runtime {
@@ -292,6 +295,11 @@ impl staking::Trait for Runtime {
 	type SlashCancelOrigin = collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
 	type SessionInterface = Self;
 	type RewardCurve = RewardCurve;
+	type NextSessionChange = Babe;
+	type ElectionLookahead = ElectionLookahead;
+	type Call = Call;
+	type SubmitTransaction = TransactionSubmitter<Self::KeyType, Runtime, UncheckedExtrinsic>;
+	type KeyType = StakingId;
 }
 
 parameter_types! {
@@ -419,8 +427,6 @@ impl offences::Trait for Runtime {
 
 impl authority_discovery::Trait for Runtime {}
 
-type SubmitTransaction = TransactionSubmitter<ImOnlineId, Runtime, UncheckedExtrinsic>;
-
 parameter_types! {
 	pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_BLOCKS as _;
 }
@@ -429,7 +435,7 @@ impl im_online::Trait for Runtime {
 	type AuthorityId = ImOnlineId;
 	type Event = Event;
 	type Call = Call;
-	type SubmitTransaction = SubmitTransaction;
+	type SubmitTransaction = TransactionSubmitter<Self::AuthorityId, Runtime, UncheckedExtrinsic>;
 	type ReportUnresponsiveness = Offences;
 	type SessionDuration = SessionDuration;
 }
