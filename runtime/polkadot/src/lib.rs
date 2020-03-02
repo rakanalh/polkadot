@@ -66,6 +66,7 @@ pub use timestamp::Call as TimestampCall;
 pub use balances::Call as BalancesCall;
 pub use attestations::{Call as AttestationsCall, MORE_ATTESTATIONS_IDENTIFIER};
 pub use parachains::Call as ParachainsCall;
+use staking::sr25519::AuthorityId as StakingId;
 
 /// Constant values used within the runtime.
 pub mod constants;
@@ -145,7 +146,7 @@ impl system::Trait for Runtime {
 	type ModuleToIndex = ModuleToIndex;
 	type AccountData = balances::AccountData<Balance>;
 	type OnNewAccount = ();
-	type OnReapAccount = (Balances, Staking, Session, Democracy);
+	type OnKilledAccount = ();
 }
 
 parameter_types! {
@@ -282,6 +283,8 @@ parameter_types! {
 	pub const BondingDuration: staking::EraIndex = 28;
 	pub const SlashDeferDuration: staking::EraIndex = 28;
 	pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
+	/// This means that the offchain election is disabled for now.
+	pub const ElectionLookahead: BlockNumber = 30;
 }
 
 impl staking::Trait for Runtime {
@@ -299,6 +302,11 @@ impl staking::Trait for Runtime {
 	type SlashCancelOrigin = collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>;
 	type SessionInterface = Self;
 	type RewardCurve = RewardCurve;
+	type NextSessionChange = Babe;
+	type ElectionLookahead = ElectionLookahead;
+	type Call = Call;
+	type SubmitTransaction = TransactionSubmitter<Self::KeyType, Runtime, UncheckedExtrinsic>;
+	type KeyType = StakingId;
 }
 
 parameter_types! {
@@ -427,7 +435,6 @@ impl offences::Trait for Runtime {
 
 impl authority_discovery::Trait for Runtime {}
 
-type SubmitTransaction = TransactionSubmitter<ImOnlineId, Runtime, UncheckedExtrinsic>;
 
 parameter_types! {
 	pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_BLOCKS as _;
@@ -437,7 +444,7 @@ impl im_online::Trait for Runtime {
 	type AuthorityId = ImOnlineId;
 	type Event = Event;
 	type Call = Call;
-	type SubmitTransaction = SubmitTransaction;
+	type SubmitTransaction = TransactionSubmitter<ImOnlineId, Runtime, UncheckedExtrinsic>;
 	type SessionDuration = SessionDuration;
 	type ReportUnresponsiveness = Offences;
 }

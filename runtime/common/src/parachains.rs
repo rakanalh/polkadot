@@ -892,6 +892,8 @@ mod tests {
 	use crate::parachains;
 	use crate::registrar;
 	use crate::slots;
+	use staking::{self, sr25519::AuthorityId as StakingId};
+	use system::offchain::TransactionSubmitter;
 
 	// result of <NodeCodec<Blake2Hasher> as trie_db::NodeCodec<Blake2Hasher>>::hashed_null_node()
 	const EMPTY_TRIE_ROOT: [u8; 32] = [
@@ -908,6 +910,7 @@ mod tests {
 	impl_outer_dispatch! {
 		pub enum Call for Test where origin: Origin {
 			parachains::Parachains,
+			staking::Staking,
 		}
 	}
 
@@ -939,7 +942,7 @@ mod tests {
 		type ModuleToIndex = ();
 		type AccountData = balances::AccountData<u128>;
 		type OnNewAccount = ();
-		type OnReapAccount = ();
+		type OnKilledAccount = ();
 	}
 
 	parameter_types! {
@@ -1023,8 +1026,10 @@ mod tests {
 		pub const SlashDeferDuration: staking::EraIndex = 7;
 		pub const AttestationPeriod: BlockNumber = 100;
 		pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
+		pub const ElectionLookahead: BlockNumber = 0;
 	}
 
+	pub type Extrinsic = sp_runtime::testing::TestXt<Call, ()>;
 	impl staking::Trait for Test {
 		type RewardRemainder = ();
 		type CurrencyToVote = ();
@@ -1039,6 +1044,11 @@ mod tests {
 		type SessionInterface = Self;
 		type Time = timestamp::Module<Test>;
 		type RewardCurve = RewardCurve;
+		type NextSessionChange = ();
+		type ElectionLookahead = ElectionLookahead;
+		type Call = Call;
+		type SubmitTransaction = TransactionSubmitter<Self::KeyType, Test, Extrinsic>;
+		type KeyType = UintAuthorityId;
 	}
 
 	impl attestations::Trait for Test {
@@ -1098,6 +1108,7 @@ mod tests {
 	type System = system::Module<Test>;
 	type RandomnessCollectiveFlip = randomness_collective_flip::Module<Test>;
 	type Registrar = registrar::Module<Test>;
+	type Staking = staking::Module<Test>;
 
 	fn new_test_ext(parachains: Vec<(ParaId, Vec<u8>, Vec<u8>)>) -> TestExternalities {
 		use staking::StakerStatus;
@@ -1118,7 +1129,7 @@ mod tests {
 
 		// stashes are the index.
 		let session_keys: Vec<_> = authority_keys.iter().enumerate()
-			.map(|(i, _k)| (i as u64, UintAuthorityId(i as u64)))
+			.map(|(i, _k)| (i as u64, i as u64, UintAuthorityId(i as u64)))
 			.collect();
 
 		let authorities: Vec<_> = authority_keys.iter().map(|k| ValidatorId::from(k.public())).collect();

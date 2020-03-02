@@ -151,16 +151,16 @@ macro_rules! new_full_start {
 			.with_import_queue(|_config, client, mut select_chain, _| {
 				let select_chain = select_chain.take()
 					.ok_or_else(|| service::Error::SelectChainRequired)?;
-				let (grandpa_block_import, grandpa_link) =
-					grandpa::block_import::<_, _, _, Runtime, _>(
-						client.clone(), &*client, select_chain
-					)?;
+				let (grandpa_block_import, grandpa_link) =grandpa::block_import(
+					client.clone(),
+					&*client,
+					select_chain,
+				)?;
 				let justification_import = grandpa_block_import.clone();
 
 				let (block_import, babe_link) = babe::block_import(
 					babe::Config::get_or_compute(&*client)?,
 					grandpa_block_import,
-					client.clone(),
 					client.clone(),
 				)?;
 
@@ -169,7 +169,6 @@ macro_rules! new_full_start {
 					block_import.clone(),
 					Some(Box::new(justification_import)),
 					None,
-					client.clone(),
 					client,
 					inherent_data_providers.clone(),
 				)?;
@@ -272,7 +271,7 @@ pub fn new_full<Runtime, Dispatch, Extrinsic>(
 	let is_authority = config.roles.is_authority() && !is_collator;
 	let force_authoring = config.force_authoring;
 	let max_block_data_size = max_block_data_size;
-	let db_path = if let Some(DatabaseConfig::Path { ref path, .. }) = config.database {
+	let db_path = if let DatabaseConfig::Path { ref path, .. } = config.expect_database() {
 		path.clone()
 	} else {
 		return Err("Starting a Polkadot service with a custom database isn't supported".to_string().into());
@@ -344,15 +343,14 @@ pub fn new_full<Runtime, Dispatch, Extrinsic>(
 			let mut path = PathBuf::from(db_path);
 			path.push("availability");
 
-			let gossip = polkadot_network::legacy
-				::AvailabilityNetworkShim(gossip_validator.clone());
+			let gossip = polkadot_network::legacy::AvailabilityNetworkShim(gossip_validator.clone());
 
 			#[cfg(not(target_os = "unknown"))]
 			{
-				av_store::Store::new(::av_store::Config {
-					cache_size: None,
-					path,
-				}, gossip)?
+				av_store::Store::new(
+					av_store::Config { cache_size: None, path },
+					gossip,
+				)?
 			}
 
 			#[cfg(target_os = "unknown")]
@@ -592,7 +590,7 @@ where
 			let fetch_checker = fetcher
 				.map(|fetcher| fetcher.checker().clone())
 				.ok_or_else(|| "Trying to start light import queue without active fetch checker")?;
-			let grandpa_block_import = grandpa::light_block_import::<_, _, _, Runtime>(
+			let grandpa_block_import = grandpa::light_block_import(
 				client.clone(), backend, &*client, Arc::new(fetch_checker)
 			)?;
 
@@ -604,7 +602,6 @@ where
 				babe::Config::get_or_compute(&*client)?,
 				grandpa_block_import,
 				client.clone(),
-				client.clone(),
 			)?;
 
 			// FIXME: pruning task isn't started since light client doesn't do `AuthoritySetup`.
@@ -613,7 +610,6 @@ where
 				babe_block_import,
 				None,
 				Some(Box::new(finality_proof_import)),
-				client.clone(),
 				client,
 				inherent_data_providers.clone(),
 			)?;

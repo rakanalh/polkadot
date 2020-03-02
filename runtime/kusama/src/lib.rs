@@ -138,7 +138,7 @@ impl system::Trait for Runtime {
 	type ModuleToIndex = ModuleToIndex;
 	type AccountData = balances::AccountData<Balance>;
 	type OnNewAccount = ();
-	type OnReapAccount = (Balances, Staking, Session, Recovery, Democracy);
+	type OnKilledAccount = ();
 }
 
 parameter_types! {
@@ -277,7 +277,7 @@ parameter_types! {
 	pub const SlashDeferDuration: staking::EraIndex = 28;
 	pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
 	/// This means that the offchain election is disabled for now.
-	pub const ElectionLookahead: BlockNumber = 0;
+	pub const ElectionLookahead: BlockNumber = 30;
 }
 
 impl staking::Trait for Runtime {
