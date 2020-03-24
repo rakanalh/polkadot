@@ -762,8 +762,9 @@ impl ProtocolHandler {
 	}
 
 	fn drop_consensus_networking(&mut self, relay_parent: &Hash) {
+		println!("REMOVE: {:?}", relay_parent);
 		// this triggers an abort of the background task.
-		self.consensus_instances.remove(relay_parent);
+		// self.consensus_instances.remove(relay_parent);
 	}
 }
 
@@ -821,6 +822,7 @@ impl<Api, Sp, Gossip> Worker<Api, Sp, Gossip> where
 
 		new_leaf_actions.perform(&self.gossip_handle);
 
+		println!("INSERT: {:?}", relay_parent);
 		self.protocol_handler.consensus_instances.insert(
 			relay_parent,
 			ConsensusNetworkingInstance {
@@ -862,12 +864,14 @@ impl<Api, Sp, Gossip> Worker<Api, Sp, Gossip> where
 				self.protocol_handler.drop_consensus_networking(&relay_parent);
 			}
 			ServiceToWorkerMsg::SubmitValidatedCollation(receipt, pov_block, chunks) => {
+				println!("HEY SEND BEFORE");
 				let relay_parent = receipt.relay_parent;
 				let instance = match self.protocol_handler.consensus_instances.get(&relay_parent) {
 					None => return,
 					Some(instance) => instance,
 				};
 
+				println!("HEY SEND");
 				distribute_validated_collation(
 					instance,
 					receipt,
@@ -1099,7 +1103,7 @@ async fn statement_import_loop<Api>(
 			Either::Left(_) | Either::Right((None, _)) => return,
 			Either::Right((Some(statement), e)) => {
 				exit = e;
-				statement
+				dbg!(statement)
 			}
 		};
 
@@ -1216,6 +1220,7 @@ fn distribute_validated_collation(
 		}
 	);
 
+	println!("TOPIC: {:?}", instance.attestation_topic);
 	gossip_handle.gossip_message(instance.attestation_topic, statement.into());
 
 	for chunk in chunks.1 {

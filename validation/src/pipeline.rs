@@ -155,6 +155,7 @@ impl FullOutput {
 
 /// The successful result of validating a collation. If the full commitments of the
 /// validation are needed, call `full_output`. Otherwise, safely drop this value.
+#[derive(Debug)]
 pub struct ValidatedCandidate<'a> {
 	pov_block: &'a PoVBlock,
 	global_validation: &'a GlobalValidationSchedule,

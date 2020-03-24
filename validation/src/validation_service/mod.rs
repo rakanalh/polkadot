@@ -377,6 +377,7 @@ impl<C, N, P, SP> ParachainValidationInstances<C, N, P, SP> where
 		n_validators: usize,
 		local_id: ValidatorIndex,
 	) {
+		println!("LAUNCH WORK");
 		let (collators, client) = (self.collators.clone(), self.client.clone());
 		let availability_store = self.availability_store.clone();
 
@@ -393,6 +394,7 @@ impl<C, N, P, SP> ParachainValidationInstances<C, N, P, SP> where
 
 			collation_work.then(move |result| match result {
 				Ok((collation_info, full_output)) => {
+					println!("FETCHED");
 					let crate::pipeline::FullOutput {
 						commitments,
 						erasure_chunks,
